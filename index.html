@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pantalla TV Bingo</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+background:#111;
+color:white;
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+overflow:hidden;
+}
+
+h2{
+margin-bottom:20px;
+font-size:32px;
+}
+
+.numero{
+font-size:220px;
+font-weight:bold;
+text-align:center;
+line-height:1;
+transition:.3s;
+}
+
+.animar{
+animation:zoom .8s ease;
+}
+
+@keyframes zoom{
+
+0%{
+transform:scale(.3);
+opacity:0;
+}
+
+60%{
+transform:scale(1.2);
+}
+
+100%{
+transform:scale(1);
+opacity:1;
+}
+
+}
+
+.subtitulo{
+font-size:28px;
+margin-top:30px;
+margin-bottom:15px;
+}
+
+.ultimos5{
+display:flex;
+gap:15px;
+justify-content:center;
+flex-wrap:wrap;
+}
+
+.bola-destacada{
+background:#ff9800;
+padding:18px 24px;
+border-radius:40px;
+font-size:34px;
+font-weight:bold;
+}
+
+.historial{
+margin-top:40px;
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+gap:10px;
+width:90%;
+max-height:200px;
+overflow:hidden;
+}
+
+.bola{
+background:#444;
+padding:10px 15px;
+border-radius:30px;
+font-size:20px;
+font-weight:bold;
+}
+
+.footer{
+position:absolute;
+bottom:15px;
+font-size:20px;
+opacity:.7;
+}
+
+</style>
+</head>
+<body>
+
+<h2>🎱 ÚLTIMA BALOTA</h2>
+
+<div id="numero" class="numero">
+--
+</div>
+
+<div class="subtitulo">
+Últimas 5 balotas
+</div>
+
+<div id="ultimos5" class="ultimos5">
+</div>
+
+<div id="historial" class="historial">
+</div>
+
+<div class="footer">
+Depósito Trujillo SAS
+</div>
+
+<audio id="sonido">
+<source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg">
+</audio>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+getDatabase,
+ref,
+onValue
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBn5NKTqkMfKiArerG5LgytLa4h67hjfog",
+authDomain: "bingo-d817b.firebaseapp.com",
+databaseURL: "https://bingo-d817b-default-rtdb.firebaseio.com",
+projectId: "bingo-d817b",
+storageBucket: "bingo-d817b.firebasestorage.app",
+messagingSenderId: "763915768353",
+appId: "1:763915768353:web:311d4124789acd14614960"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let ultimoMostrado = "";
+
+onValue(
+ref(db,"bingo/ultimoNumero"),
+(snapshot)=>{
+
+const valor = snapshot.val();
+
+if(!valor) return;
+
+const numero =
+document.getElementById("numero");
+
+numero.innerHTML = valor;
+
+if(valor !== ultimoMostrado){
+
+numero.classList.remove("animar");
+
+setTimeout(()=>{
+
+numero.classList.add("animar");
+
+},50);
+
+document
+.getElementById("sonido")
+.play()
+.catch(()=>{});
+
+ultimoMostrado = valor;
+
+}
+
+}
+);
+
+onValue(
+ref(db,"bingo/historial"),
+(snapshot)=>{
+
+if(!snapshot.exists()) return;
+
+const datos =
+Object.values(snapshot.val());
+
+const invertido =
+datos.reverse();
+
+let htmlHistorial = "";
+let htmlUltimos = "";
+
+invertido.forEach(item=>{
+
+htmlHistorial += `
+<div class="bola">
+${item.numero}
+</div>
+`;
+
+});
+
+invertido
+.slice(0,5)
+.reverse()
+.forEach(item=>{
+
+htmlUltimos += `
+<div class="bola-destacada">
+${item.numero}
+</div>
+`;
+
+});
+
+document.getElementById("historial")
+.innerHTML = htmlHistorial;
+
+document.getElementById("ultimos5")
+.innerHTML = htmlUltimos;
+
+}
+);
+
+</script>
+
+</body>
+</html>

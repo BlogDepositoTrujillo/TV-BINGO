@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Bingo TV V3.2</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+background:#101010;
+color:#fff;
+height:100vh;
+overflow:hidden;
+}
+
+/* ==========================
+   PANTALLA NORMAL
+========================== */
+
+#pantallaNormal{
+width:100%;
+height:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+padding:20px;
+}
+
+.header{
+position:absolute;
+top:20px;
+left:0;
+right:0;
+text-align:center;
+font-size:42px;
+font-weight:bold;
+}
+
+.numero{
+font-size:220px;
+font-weight:bold;
+line-height:1;
+text-align:center;
+margin-top:30px;
+}
+
+.animar{
+animation:zoom .8s ease;
+}
+
+@keyframes zoom{
+
+0%{
+transform:scale(.3);
+opacity:0;
+}
+
+60%{
+transform:scale(1.2);
+}
+
+100%{
+transform:scale(1);
+opacity:1;
+}
+
+}
+
+.subtitulo{
+margin-top:20px;
+font-size:30px;
+font-weight:bold;
+}
+
+.ultimos5{
+display:flex;
+justify-content:center;
+align-items:center;
+gap:15px;
+flex-wrap:wrap;
+margin-top:20px;
+}
+
+.bola-destacada{
+background:#ff9800;
+padding:16px 25px;
+border-radius:50px;
+font-size:32px;
+font-weight:bold;
+box-shadow:0 0 15px rgba(255,152,0,.4);
+}
+
+.historial{
+position:absolute;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+width:95%;
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+gap:8px;
+}
+
+.bola{
+background:#3a3a3a;
+padding:8px 14px;
+border-radius:30px;
+font-size:18px;
+font-weight:bold;
+}
+
+.footer{
+position:absolute;
+top:20px;
+right:25px;
+font-size:18px;
+opacity:.8;
+}
+
+/* ==========================
+   PANTALLA GANADOR
+========================== */
+
+#pantallaGanador{
+display:none;
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:
+linear-gradient(
+135deg,
+#0c7a00,
+#11b100
+);
+justify-content:center;
+align-items:center;
+flex-direction:column;
+text-align:center;
+padding:40px;
+}
+
+.ganadorTitulo{
+font-size:100px;
+font-weight:bold;
+animation:pulse 1.5s infinite;
+}
+
+.ganadorTexto{
+font-size:60px;
+margin-top:20px;
+}
+
+.nombreGanador{
+margin-top:40px;
+font-size:85px;
+font-weight:bold;
+color:#fff700;
+text-shadow:
+0 0 10px #00ff40,
+0 0 20px #00ff40,
+0 0 40px #00ff40;
+word-break:break-word;
+max-width:90%;
+}
+
+@keyframes pulse{
+
+0%{
+transform:scale(1);
+}
+
+50%{
+transform:scale(1.05);
+}
+
+100%{
+transform:scale(1);
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- PANTALLA NORMAL -->
+
+<div id="pantallaNormal">
+
+<div class="header">
+🎱 BINGO EN VIVO 🎱
+</div>
+
+<div class="footer">
+DEPÓSITO TRUJILLO SAS
+</div>
+
+<div id="numero" class="numero">
+--
+</div>
+
+<div class="subtitulo">
+Últimas 5 balotas
+</div>
+
+<div id="ultimos5" class="ultimos5">
+</div>
+
+<div id="historial" class="historial">
+</div>
+
+</div>
+
+<!-- PANTALLA GANADOR -->
+
+<div id="pantallaGanador">
+
+<div class="ganadorTitulo">
+🏆 BINGO 🏆
+</div>
+
+<div class="ganadorTexto">
+TENEMOS GANADOR
+</div>
+
+<div
+id="nombreGanadorTV"
+class="nombreGanador">
+</div>
+
+</div>
+
+<!-- SONIDO -->
+
+<audio id="sonido">
+<source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg">
+</audio>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+getDatabase,
+ref,
+onValue
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* ==========================
+   FIREBASE
+========================== */
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBn5NKTqkMfKiArerG5LgytLa4h67hjfog",
+authDomain: "bingo-d817b.firebaseapp.com",
+databaseURL: "https://bingo-d817b-default-rtdb.firebaseio.com",
+projectId: "bingo-d817b",
+storageBucket: "bingo-d817b.firebasestorage.app",
+messagingSenderId: "763915768353",
+appId: "1:763915768353:web:311d4124789acd14614960"
+
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ==========================
+   ULTIMA BALOTA
+========================== */
+
+let ultimoNumeroMostrado = "";
+
+onValue(
+ref(db,"bingo/ultimoNumero"),
+(snapshot)=>{
+
+const valor = snapshot.val();
+
+if(!valor){
+return;
+}
+
+const numero =
+document.getElementById("numero");
+
+numero.innerHTML = valor;
+
+if(valor !== ultimoNumeroMostrado){
+
+numero.classList.remove("animar");
+
+setTimeout(()=>{
+
+numero.classList.add("animar");
+
+},50);
+
+document
+.getElementById("sonido")
+.play()
+.catch(()=>{});
+
+ultimoNumeroMostrado = valor;
+
+}
+
+}
+);
+
+/* ==========================
+   HISTORIAL
+========================== */
+
+onValue(
+ref(db,"bingo/historial"),
+(snapshot)=>{
+
+const historial =
+document.getElementById("historial");
+
+const ultimos5 =
+document.getElementById("ultimos5");
+
+if(!snapshot.exists()){
+
+historial.innerHTML = "";
+ultimos5.innerHTML = "";
+
+return;
+
+}
+
+const datos =
+Object.values(snapshot.val());
+
+const lista =
+datos.reverse();
+
+let htmlHistorial = "";
+let htmlUltimos = "";
+
+lista.forEach(item=>{
+
+htmlHistorial += `
+<div class="bola">
+${item.numero}
+</div>
+`;
+
+});
+
+lista
+.slice(0,5)
+.reverse()
+.forEach(item=>{
+
+htmlUltimos += `
+<div class="bola-destacada">
+${item.numero}
+</div>
+`;
+
+});
+
+historial.innerHTML =
+htmlHistorial;
+
+ultimos5.innerHTML =
+htmlUltimos;
+
+}
+);
+
+/* ==========================
+   GANADOR
+========================== */
+
+onValue(
+ref(db,"bingo/ganador"),
+(snapshot)=>{
+
+document.getElementById(
+"nombreGanadorTV"
+).innerHTML =
+snapshot.val() || "";
+
+}
+);
+
+/* ==========================
+   MODO
+========================== */
+
+onValue(
+ref(db,"bingo/modo"),
+(snapshot)=>{
+
+const modo =
+snapshot.val() || "normal";
+
+const pantallaNormal =
+document.getElementById(
+"pantallaNormal"
+);
+
+const pantallaGanador =
+document.getElementById(
+"pantallaGanador"
+);
+
+if(modo === "ganador"){
+
+pantallaNormal.style.display =
+"none";
+
+pantallaGanador.style.display =
+"flex";
+
+}else{
+
+pantallaNormal.style.display =
+"flex";
+
+pantallaGanador.style.display =
+"none";
+
+}
+
+}
+);
+
+</script>
+
+</body>
+</html>
